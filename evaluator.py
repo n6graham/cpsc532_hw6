@@ -5,6 +5,7 @@ from daphne import daphne
 from pyrsistent import pmap, plist
 import numpy as np
 from tests import is_tol, run_prob_test,load_truth
+import json
 
 #these are adapted from Peter Norvig's Lispy
 class Env():
@@ -62,6 +63,8 @@ def standard_env():
 
 def evaluate(exp, env=None):
 
+
+    #print("exp is ", exp)
     if env is None:
         env = standard_env()
         
@@ -69,17 +72,23 @@ def evaluate(exp, env=None):
     if type(exp) is list:
         op, *args = exp
         if op == 'sample':
+
+            #print("reached sample statement, args is:", args)
+
             alpha = evaluate(args[0], env=env)
             d = evaluate(args[1], env=env)
             s = d.sample()
             k = evaluate(args[2], env=env)
 
-            sigma = {'type' : 'sample'
+            # send "continue", sigma 
+
+            sigma = {'type' : 'sample',         
                      #TODO: put any other stuff you need here
                      }
             
-            
             return k, [s], sigma
+
+
         elif op == 'observe':
             alpha = evaluate(args[0], env=env)
             d = evaluate(args[1], env=env)
@@ -87,10 +96,12 @@ def evaluate(exp, env=None):
             k = evaluate(args[3], env=env)
 
 
-            sigma = {'type' : 'observe'
+            sigma = {
+                'type' : 'observe',
+                'logW':d.log_prob(c),
+                'alpha': alpha
                      #TODO: put any other stuff you need here
                      }
-
 
             return k, [c], sigma
         elif op == 'if':
@@ -111,8 +122,10 @@ def evaluate(exp, env=None):
                      #TODO: put any other stuff you need here
                      }
 
-                     
+
             return proc, values, sigma
+
+
     elif type(exp) is str:
         if exp[0] == "\"":  # strings have double, double quotes
             return exp[1:-1]
@@ -143,12 +156,15 @@ def get_stream(exp):
 
 def run_deterministic_tests(use_cache=True, cache='programs/tests/'):
 
+    
+
+
     for i in range(1,15):
         if use_cache:
             with open(cache + 'deterministic/test_{}.json'.format(i),'r') as f:
                 exp = json.load(f)
         else:
-            exp = daphne(['desugar-hoppl-cps', '-i', '../../HW6/programs/tests/deterministic/test_{}.daphne'.format(i)])
+            exp = daphne(['desugar-hoppl-cps', '-i', '../HW6/programs/tests/deterministic/test_{}.daphne'.format(i)])
             with open(cache + 'deterministic/test_{}.json'.format(i),'w') as f:
                 json.dump(exp, f)
         truth = load_truth('programs/tests/deterministic/test_{}.truth'.format(i))
@@ -161,17 +177,21 @@ def run_deterministic_tests(use_cache=True, cache='programs/tests/'):
 
     print('FOPPL Tests passed')
 
+
+
     for i in range(1,13):
         if use_cache:
             with open(cache + 'hoppl-deterministic/test_{}.json'.format(i),'r') as f:
                 exp = json.load(f)
         else:
-            exp = daphne(['desugar-hoppl-cps', '-i', '../../HW6/programs/tests/hoppl-deterministic/test_{}.daphne'.format(i)])
+            exp = daphne(['desugar-hoppl-cps', '-i', '../HW6/programs/tests/hoppl-deterministic/test_{}.daphne'.format(i)])
             with open(cache + 'hoppl-deterministic/test_{}.json'.format(i),'w') as f:
                 json.dump(exp, f)
 
         truth = load_truth('programs/tests/hoppl-deterministic/test_{}.truth'.format(i))
         ret = sample_from_prior(exp)
+
+        print("ret is", ret)
 
         try:
             assert(is_tol(ret, truth))
@@ -194,7 +214,7 @@ def run_probabilistic_tests(use_cache=True, cache='programs/tests/'):
             with open(cache + 'probabilistic/test_{}.json'.format(i),'r') as f:
                 exp = json.load(f)
         else:
-            exp = daphne(['desugar-hoppl-cps', '-i', '../../HW6/programs/tests/probabilistic/test_{}.daphne'.format(i)])
+            exp = daphne(['desugar-hoppl-cps', '-i', '../HW6/programs/tests/probabilistic/test_{}.daphne'.format(i)])
             with open(cache + 'probabilistic/test_{}.json'.format(i),'w') as f:
                 json.dump(exp, f)
         truth = load_truth('programs/tests/probabilistic/test_{}.truth'.format(i))
@@ -211,12 +231,58 @@ def run_probabilistic_tests(use_cache=True, cache='programs/tests/'):
 
 if __name__ == '__main__':
     # run the tests, if you wish:  
-   # run_deterministic_tests(use_cache=False)
-   # run_probabilistic_tests(use_cache=False)
+    # run_deterministic_tests(use_cache=True)
+   
+    # run_deterministic_tests(use_cache=True)
+
+    # run_probabilistic_tests(use_cache=False)
+
+    
+    
+    for i in range(1,5):
+
+        prog = daphne(['desugar-hoppl-cps', '-i', '../HW6/programs/{}.daphne'.format(i)])
+
+        with open('../HW6/programs/{}.json'.format(i),'w') as json_file:
+            json.dump(prog, json_file)
+    
+    
+
+
+    '''
+    #print('programs/{}.json'.format(4),'r')
+
+    # how do we precompile the jsons
+    # exp = daphne(['desugar-hoppl', '-i', '../HW6/programs/tests/hoppl-deterministic/test_{}.daphne'.format(i)])
 
     #load your precompiled json's here:
-    with open('programs/{}.json'.format(4),'r') as f:
-        exp = json.load(f)
+    #with open('programs/{}.json'.format(4),'r') as f:
+
+
+
+        with open('programs/{}.json'.format(i),'r') as f:
+            exp = json.load(f)
+
+
+        print(exp)
+
+        for i in range(1,15):
+
+
+        prog = daphne(['desugar-hoppl-cps', '-i', '../HW6/programs/tests/deterministic/test_{}.daphne'.format(i)])
+
+        print(prog)
+
+
+        with open('../HW6/programs/{}.json'.format(i),'w') as json_file:
+            json.dump(prog, json_file)
+
+
+  
+
+
+
+
 
     #this should run a sample from the prior
     print(sample_from_prior(exp))
@@ -232,3 +298,4 @@ if __name__ == '__main__':
     res = cont(*args)
     #you know the program is done, when "res" is not a tuple, but a simple data object
 
+    '''
