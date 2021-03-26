@@ -95,7 +95,6 @@ def evaluate(exp, env=None):
             c = evaluate(args[2], env=env)
             k = evaluate(args[3], env=env)
 
-
             sigma = {
                 'type' : 'observe',
                 'logW':d.log_prob(c),
